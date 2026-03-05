@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
 
+use crate::AppsMcpCookieStore;
 use crate::AuthManager;
 use crate::CodexAuth;
 use crate::SandboxState;
@@ -344,6 +345,7 @@ impl Codex {
     pub(crate) async fn spawn(
         mut config: Config,
         auth_manager: Arc<AuthManager>,
+        apps_mcp_cookie_store: Arc<AppsMcpCookieStore>,
         models_manager: Arc<ModelsManager>,
         skills_manager: Arc<SkillsManager>,
         plugins_manager: Arc<PluginsManager>,
@@ -509,6 +511,7 @@ impl Codex {
             session_configuration,
             config.clone(),
             auth_manager.clone(),
+            apps_mcp_cookie_store,
             models_manager.clone(),
             exec_policy,
             tx_event.clone(),
@@ -1175,6 +1178,7 @@ impl Session {
         mut session_configuration: SessionConfiguration,
         config: Arc<Config>,
         auth_manager: Arc<AuthManager>,
+        apps_mcp_cookie_store: Arc<AppsMcpCookieStore>,
         models_manager: Arc<ModelsManager>,
         exec_policy: ExecPolicyManager,
         tx_event: Sender<Event>,
@@ -1345,6 +1349,9 @@ impl Session {
         }
 
         let auth = auth.as_ref();
+        let apps_mcp_cookie_jar = mcp_servers
+            .contains_key(CODEX_APPS_MCP_SERVER_NAME)
+            .then(|| apps_mcp_cookie_store.jar_for(config.as_ref(), auth));
         let auth_mode = auth.map(CodexAuth::auth_mode).map(TelemetryAuthMode::from);
         let account_id = auth.and_then(CodexAuth::get_account_id);
         let account_email = auth.and_then(CodexAuth::get_account_email);
@@ -1511,6 +1518,7 @@ impl Session {
                 &config.permissions.approval_policy,
             ))),
             mcp_startup_cancellation_token: Mutex::new(CancellationToken::new()),
+            apps_mcp_cookie_store,
             unified_exec_manager: UnifiedExecProcessManager::new(
                 config.background_terminal_max_timeout,
             ),
@@ -1635,6 +1643,7 @@ impl Session {
             config.codex_home.clone(),
             codex_apps_tools_cache_key(auth),
             tool_plugin_provenance,
+            apps_mcp_cookie_jar,
         )
         .await;
         {
@@ -3686,6 +3695,13 @@ impl Session {
             auth.as_ref(),
             config.as_ref(),
         );
+        let apps_mcp_cookie_jar = mcp_servers
+            .contains_key(CODEX_APPS_MCP_SERVER_NAME)
+            .then(|| {
+                self.services
+                    .apps_mcp_cookie_store
+                    .jar_for(config.as_ref(), auth.as_ref())
+            });
         let auth_statuses = compute_auth_statuses(mcp_servers.iter(), store_mode).await;
         let sandbox_state = SandboxState {
             sandbox_policy: turn_context.sandbox_policy.get().clone(),
@@ -3708,6 +3724,7 @@ impl Session {
             config.codex_home.clone(),
             codex_apps_tools_cache_key(auth.as_ref()),
             tool_plugin_provenance,
+            apps_mcp_cookie_jar,
         )
         .await;
         {
@@ -8808,6 +8825,7 @@ mod tests {
             session_configuration,
             Arc::clone(&config),
             auth_manager,
+            Arc::new(AppsMcpCookieStore::default()),
             models_manager,
             ExecPolicyManager::default(),
             tx_event,
@@ -8916,6 +8934,7 @@ mod tests {
                 ),
             )),
             mcp_startup_cancellation_token: Mutex::new(CancellationToken::new()),
+            apps_mcp_cookie_store: Arc::new(AppsMcpCookieStore::default()),
             unified_exec_manager: UnifiedExecProcessManager::new(
                 config.background_terminal_max_timeout,
             ),
@@ -9325,6 +9344,7 @@ mod tests {
                 ),
             )),
             mcp_startup_cancellation_token: Mutex::new(CancellationToken::new()),
+            apps_mcp_cookie_store: Arc::new(AppsMcpCookieStore::default()),
             unified_exec_manager: UnifiedExecProcessManager::new(
                 config.background_terminal_max_timeout,
             ),
