@@ -1706,14 +1706,14 @@ impl CodexMessageProcessor {
         request_id: ConnectionRequestId,
         params: CommandExecWriteParams,
     ) {
-        let command_exec_manager = self.command_exec_manager.clone();
-        let outgoing = self.outgoing.clone();
-        tokio::spawn(async move {
-            match command_exec_manager.write(request_id.clone(), params).await {
-                Ok(response) => outgoing.send_response(request_id, response).await,
-                Err(error) => outgoing.send_error(request_id, error).await,
-            }
-        });
+        match self
+            .command_exec_manager
+            .write(request_id.clone(), params)
+            .await
+        {
+            Ok(response) => self.outgoing.send_response(request_id, response).await,
+            Err(error) => self.outgoing.send_error(request_id, error).await,
+        }
     }
 
     async fn command_exec_resize(
@@ -1721,17 +1721,14 @@ impl CodexMessageProcessor {
         request_id: ConnectionRequestId,
         params: CommandExecResizeParams,
     ) {
-        let command_exec_manager = self.command_exec_manager.clone();
-        let outgoing = self.outgoing.clone();
-        tokio::spawn(async move {
-            match command_exec_manager
-                .resize(request_id.clone(), params)
-                .await
-            {
-                Ok(response) => outgoing.send_response(request_id, response).await,
-                Err(error) => outgoing.send_error(request_id, error).await,
-            }
-        });
+        match self
+            .command_exec_manager
+            .resize(request_id.clone(), params)
+            .await
+        {
+            Ok(response) => self.outgoing.send_response(request_id, response).await,
+            Err(error) => self.outgoing.send_error(request_id, error).await,
+        }
     }
 
     async fn command_exec_terminate(
@@ -1739,17 +1736,14 @@ impl CodexMessageProcessor {
         request_id: ConnectionRequestId,
         params: CommandExecTerminateParams,
     ) {
-        let command_exec_manager = self.command_exec_manager.clone();
-        let outgoing = self.outgoing.clone();
-        tokio::spawn(async move {
-            match command_exec_manager
-                .terminate(request_id.clone(), params)
-                .await
-            {
-                Ok(response) => outgoing.send_response(request_id, response).await,
-                Err(error) => outgoing.send_error(request_id, error).await,
-            }
-        });
+        match self
+            .command_exec_manager
+            .terminate(request_id.clone(), params)
+            .await
+        {
+            Ok(response) => self.outgoing.send_response(request_id, response).await,
+            Err(error) => self.outgoing.send_error(request_id, error).await,
+        }
     }
 
     async fn thread_start(&self, request_id: ConnectionRequestId, params: ThreadStartParams) {
