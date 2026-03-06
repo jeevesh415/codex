@@ -1845,6 +1845,14 @@ impl Config {
             );
             approval_policy = constrained_approval_policy.value();
         }
+        if matches!(approval_policy, AskForApproval::Guardian)
+            && !features.enabled(Feature::GuardianApproval)
+        {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "approval_policy `guardian` requires `features.guardian_approval = true`",
+            ));
+        }
         let web_search_mode = resolve_web_search_mode(&cfg, &config_profile, &features)
             .unwrap_or(WebSearchMode::Cached);
         // TODO(dylan): We should be able to leverage ConfigLayerStack so that
@@ -3606,6 +3614,55 @@ profile = "project"
                 crate::model_provider_info::WireApi::Responses
             );
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn guardian_approval_requires_feature_flag() -> std::io::Result<()> {
+        let codex_home = TempDir::new()?;
+        let cfg = ConfigToml {
+            approval_policy: Some(AskForApproval::Guardian),
+            ..Default::default()
+        };
+
+        let err = Config::load_from_base_config_with_overrides(
+            cfg,
+            ConfigOverrides::default(),
+            codex_home.path().to_path_buf(),
+        )
+        .expect_err("guardian approval should be gated");
+
+        assert_eq!(
+            err.to_string(),
+            "approval_policy `guardian` requires `features.guardian_approval = true`"
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn guardian_approval_is_allowed_when_feature_enabled() -> std::io::Result<()> {
+        let codex_home = TempDir::new()?;
+        let mut entries = BTreeMap::new();
+        entries.insert("guardian_approval".to_string(), true);
+        let cfg = ConfigToml {
+            approval_policy: Some(AskForApproval::Guardian),
+            features: Some(crate::features::FeaturesToml { entries }),
+            ..Default::default()
+        };
+
+        let config = Config::load_from_base_config_with_overrides(
+            cfg,
+            ConfigOverrides::default(),
+            codex_home.path().to_path_buf(),
+        )?;
+
+        assert_eq!(
+            config.permissions.approval_policy.value(),
+            AskForApproval::Guardian
+        );
+        assert!(config.features.enabled(Feature::GuardianApproval));
 
         Ok(())
     }

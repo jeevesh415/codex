@@ -691,6 +691,7 @@
             "untrusted",
             "on-failure",
             "on-request",
+            "guardian",
             "never"
           ],
           "type": "string"
