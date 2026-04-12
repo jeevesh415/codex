@@ -1,8 +1,8 @@
 use crate::agent::AgentStatus;
 use crate::agent::status::is_final as is_final_agent_status;
 use crate::codex::Session;
+use crate::codex::emit_subagent_session_started;
 use crate::config::Config;
-use crate::features::Feature;
 use crate::memories::memory_root;
 use crate::memories::metrics;
 use crate::memories::phase_two;
@@ -11,6 +11,7 @@ use crate::memories::storage::rebuild_raw_memories_file_from_memories;
 use crate::memories::storage::rollout_summary_file_stem;
 use crate::memories::storage::sync_rollout_summaries_from_memories;
 use codex_config::Constrained;
+use codex_features::Feature;
 use codex_protocol::ThreadId;
 use codex_protocol::protocol::AskForApproval;
 use codex_protocol::protocol::SandboxPolicy;
@@ -132,7 +133,7 @@ pub(super) async fn run(session: &Arc<Session>, config: Arc<Config>) {
     let thread_id = match session
         .services
         .agent_control
-        .spawn_agent(agent_config, prompt, Some(source))
+        .spawn_agent(agent_config, prompt.into(), Some(source))
         .await
     {
         Ok(thread_id) => thread_id,
@@ -142,6 +143,27 @@ pub(super) async fn run(session: &Arc<Session>, config: Arc<Config>) {
             return;
         }
     };
+
+    if let Some(thread_config) = session
+        .services
+        .agent_control
+        .get_agent_config_snapshot(thread_id)
+        .await
+    {
+        if session.enabled(Feature::GeneralAnalytics) {
+            let client_metadata = session.app_server_client_metadata().await;
+            emit_subagent_session_started(
+                &session.services.analytics_events_client,
+                client_metadata,
+                thread_id,
+                /*parent_thread_id*/ None,
+                thread_config,
+                SubAgentSource::MemoryConsolidation,
+            );
+        }
+    } else {
+        warn!("failed to load memory consolidation thread config for analytics: {thread_id}");
+    }
 
     // 6. Spawn the agent handler.
     agent::handle(
@@ -266,7 +288,18 @@ mod agent {
         let root = memory_root(&config.codex_home);
         let mut agent_config = config.as_ref().clone();
 
-        agent_config.cwd = root;
+        match AbsolutePathBuf::from_absolute_path(root) {
+            Ok(root) => agent_config.cwd = root,
+            Err(err) => {
+                warn!(
+                    "memory phase-2 consolidation could not set cwd from codex_home {}: {err}",
+                    agent_config.codex_home.display()
+                );
+                return None;
+            }
+        }
+        // Consolidation threads must never feed back into phase-1 memory generation.
+        agent_config.memories.generate_memories = false;
         // Approval policy
         agent_config.permissions.approval_policy = Constrained::allow_only(AskForApproval::Never);
         // Consolidation runs as an internal sub-agent and must not recursively delegate.

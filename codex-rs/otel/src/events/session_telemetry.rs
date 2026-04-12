@@ -3,28 +3,29 @@ use crate::ToolDecisionSource;
 use crate::events::shared::log_and_trace_event;
 use crate::events::shared::log_event;
 use crate::events::shared::trace_event;
+use crate::metrics::API_CALL_COUNT_METRIC;
+use crate::metrics::API_CALL_DURATION_METRIC;
 use crate::metrics::MetricsClient;
 use crate::metrics::MetricsConfig;
 use crate::metrics::MetricsError;
+use crate::metrics::PROFILE_USAGE_METRIC;
+use crate::metrics::RESPONSES_API_ENGINE_IAPI_TBT_DURATION_METRIC;
+use crate::metrics::RESPONSES_API_ENGINE_IAPI_TTFT_DURATION_METRIC;
+use crate::metrics::RESPONSES_API_ENGINE_SERVICE_TBT_DURATION_METRIC;
+use crate::metrics::RESPONSES_API_ENGINE_SERVICE_TTFT_DURATION_METRIC;
+use crate::metrics::RESPONSES_API_INFERENCE_TIME_DURATION_METRIC;
+use crate::metrics::RESPONSES_API_OVERHEAD_DURATION_METRIC;
 use crate::metrics::Result as MetricsResult;
-use crate::metrics::names::API_CALL_COUNT_METRIC;
-use crate::metrics::names::API_CALL_DURATION_METRIC;
-use crate::metrics::names::RESPONSES_API_ENGINE_IAPI_TBT_DURATION_METRIC;
-use crate::metrics::names::RESPONSES_API_ENGINE_IAPI_TTFT_DURATION_METRIC;
-use crate::metrics::names::RESPONSES_API_ENGINE_SERVICE_TBT_DURATION_METRIC;
-use crate::metrics::names::RESPONSES_API_ENGINE_SERVICE_TTFT_DURATION_METRIC;
-use crate::metrics::names::RESPONSES_API_INFERENCE_TIME_DURATION_METRIC;
-use crate::metrics::names::RESPONSES_API_OVERHEAD_DURATION_METRIC;
-use crate::metrics::names::SSE_EVENT_COUNT_METRIC;
-use crate::metrics::names::SSE_EVENT_DURATION_METRIC;
-use crate::metrics::names::TOOL_CALL_COUNT_METRIC;
-use crate::metrics::names::TOOL_CALL_DURATION_METRIC;
-use crate::metrics::names::WEBSOCKET_EVENT_COUNT_METRIC;
-use crate::metrics::names::WEBSOCKET_EVENT_DURATION_METRIC;
-use crate::metrics::names::WEBSOCKET_REQUEST_COUNT_METRIC;
-use crate::metrics::names::WEBSOCKET_REQUEST_DURATION_METRIC;
+use crate::metrics::SSE_EVENT_COUNT_METRIC;
+use crate::metrics::SSE_EVENT_DURATION_METRIC;
+use crate::metrics::SessionMetricTagValues;
+use crate::metrics::TOOL_CALL_COUNT_METRIC;
+use crate::metrics::TOOL_CALL_DURATION_METRIC;
+use crate::metrics::WEBSOCKET_EVENT_COUNT_METRIC;
+use crate::metrics::WEBSOCKET_EVENT_DURATION_METRIC;
+use crate::metrics::WEBSOCKET_REQUEST_COUNT_METRIC;
+use crate::metrics::WEBSOCKET_REQUEST_DURATION_METRIC;
 use crate::metrics::runtime_metrics::RuntimeMetricsSummary;
-use crate::metrics::tags::SessionMetricTagValues;
 use crate::metrics::timer::Timer;
 use crate::provider::OtelProvider;
 use crate::sanitize_metric_tag_value;
@@ -321,6 +322,9 @@ impl SessionTelemetry {
         mcp_servers: Vec<&str>,
         active_profile: Option<String>,
     ) {
+        if active_profile.is_some() {
+            self.counter(PROFILE_USAGE_METRIC, /*inc*/ 1, &[]);
+        }
         log_and_trace_event!(
             self,
             common: {

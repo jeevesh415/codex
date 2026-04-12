@@ -86,6 +86,7 @@ fn transport_name(transport: AppServerTransport) -> &'static str {
     match transport {
         AppServerTransport::Stdio => "stdio",
         AppServerTransport::WebSocket { .. } => "websocket",
+        AppServerTransport::Off => "off",
     }
 }
 
@@ -107,6 +108,7 @@ fn app_server_request_span_template(
         app_server.api_version = "v2",
         app_server.client_name = field::Empty,
         app_server.client_version = field::Empty,
+        turn.id = field::Empty,
     )
 }
 

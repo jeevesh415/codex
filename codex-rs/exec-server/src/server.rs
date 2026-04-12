@@ -1,6 +1,9 @@
+mod file_system_handler;
 mod handler;
-mod jsonrpc;
+mod process_handler;
 mod processor;
+mod registry;
+mod session_registry;
 mod transport;
 
 pub(crate) use handler::ExecServerHandler;
