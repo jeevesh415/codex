@@ -194,7 +194,7 @@ fn parse_completed(
                             });
                         }
                     }
-                } else if trimmed_stdout.starts_with('{') || trimmed_stdout.starts_with('[') {
+                } else if output_parser::looks_like_json(&run_result.stdout) {
                     status = HookRunStatus::Failed;
                     entries.push(HookOutputEntry {
                         kind: HookOutputEntryKind::Error,
@@ -255,6 +255,7 @@ fn parse_completed(
             stop_reason,
             additional_contexts_for_model,
         },
+        completion_order: 0,
     }
 }
 
@@ -419,7 +420,9 @@ mod tests {
             timeout_sec: 5,
             status_message: None,
             source_path: test_path_buf("/tmp/hooks.json").abs(),
+            source: codex_protocol::protocol::HookSource::User,
             display_order: 0,
+            env: std::collections::HashMap::new(),
         }
     }
 

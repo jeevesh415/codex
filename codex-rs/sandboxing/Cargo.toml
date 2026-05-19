@@ -7,6 +7,7 @@ license.workspace = true
 [lib]
 name = "codex_sandboxing"
 path = "src/lib.rs"
+doctest = false
 
 [lints]
 workspace = true
@@ -18,6 +19,7 @@ codex-utils-absolute-path = { workspace = true }
 dunce = { workspace = true }
 libc = { workspace = true }
 serde_json = { workspace = true }
+regex-lite = { workspace = true }
 tracing = { workspace = true, features = ["log"] }
 url = { workspace = true }
 which = { workspace = true }

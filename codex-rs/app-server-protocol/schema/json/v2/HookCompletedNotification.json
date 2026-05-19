@@ -8,9 +8,13 @@
     "HookEventName": {
       "enum": [
         "preToolUse",
+        "permissionRequest",
         "postToolUse",
+        "preCompact",
+        "postCompact",
         "sessionStart",
         "userPromptSubmit",
+        "subagentStart",
         "stop"
       ],
       "type": "string"
@@ -106,6 +110,14 @@
         "scope": {
           "$ref": "#/definitions/HookScope"
         },
+        "source": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/HookSource"
+            }
+          ],
+          "default": "unknown"
+        },
         "sourcePath": {
           "$ref": "#/definitions/AbsolutePathBuf"
         },
@@ -141,6 +153,21 @@
       "enum": [
         "thread",
         "turn"
+      ],
+      "type": "string"
+    },
+    "HookSource": {
+      "enum": [
+        "system",
+        "user",
+        "project",
+        "mdm",
+        "sessionFlags",
+        "plugin",
+        "cloudRequirements",
+        "legacyManagedConfigFile",
+        "legacyManagedConfigMdm",
+        "unknown"
       ],
       "type": "string"
     }

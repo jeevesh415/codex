@@ -25,12 +25,31 @@ impl PermissionsToml {
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq, JsonSchema)]
 #[schemars(deny_unknown_fields)]
 pub struct PermissionProfileToml {
+    pub workspace_roots: Option<WorkspaceRootsToml>,
     pub filesystem: Option<FilesystemPermissionsToml>,
     pub network: Option<NetworkToml>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq, JsonSchema)]
+pub struct WorkspaceRootsToml {
+    #[serde(flatten)]
+    pub entries: BTreeMap<String, bool>,
+}
+
+impl WorkspaceRootsToml {
+    pub fn enabled_roots(&self) -> impl Iterator<Item = &String> {
+        self.entries
+            .iter()
+            .filter_map(|(path, enabled)| (*enabled).then_some(path))
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq, JsonSchema)]
 pub struct FilesystemPermissionsToml {
+    /// Optional maximum depth for expanding unreadable glob patterns on
+    /// platforms that snapshot glob matches before sandbox startup.
+    #[schemars(range(min = 1))]
+    pub glob_scan_max_depth: Option<usize>,
     #[serde(flatten)]
     pub entries: BTreeMap<String, FilesystemPermissionToml>,
 }
